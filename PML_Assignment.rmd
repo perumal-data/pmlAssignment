@@ -1,0 +1,76 @@
+---
+title: "Predict Exercise Pattern Using Automatic Activity Detection Sensor Data"
+output: html_document
+---
+
+## Summary
+
+Wearable sensors like Jawbone Up, Nike FuelBand, and Fitbit enables large amount of data collection about personal activity relatively inexpensively. The goal of this analysis is to automatically recognize the activity type by machine learning model using this data.Random forest model models are built using training dataset. Cross validation is used to validate the results.
+
+## Data Source
+
+* The training data : <https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv>
+* The test data     : <https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+* Source            : <http://groupware.les.inf.puc-rio.br/har>
+
+
+```{r cache=TRUE, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+library(caret)
+library(randomForest)
+```
+
+## Exploratory Data Analysis  
+
+Load data from CSV files.
+
+```{r cache=TRUE}
+trainData <- read.csv("pml-training.csv", stringsAsFactor=FALSE)
+testData <- read.csv("pml-testing.csv", stringsAsFactor=FALSE)
+```
+
+Check the data quality of taining data 
+
+```{r cache=TRUE}
+sum(complete.cases(trainData))
+sum(complete.cases(testData))
+```
+
+There are few complete cases. The data set is reduced by applying filters to remove empty colums and non significant values.
+
+
+```{r cache=TRUE}
+trainData1 <- trainData[,sapply(trainData, is.numeric)]
+trainData1 <- trainData1[,sapply(trainData1, function(x) sum(is.na(x)) == 0)]
+trainData1$classe <- as.factor(trainData$classe)
+sum(complete.cases(trainData1))
+```
+
+```{r cache=TRUE}
+testData1 <- testData[,sapply(testData, is.numeric)]
+testData1 <- testData1[,sapply(testData1, function(x) sum(is.na(x)) == 0)]
+#testData1$problem_id <- as.factor(testData$problem_id)
+sum(complete.cases(testData1))
+```
+
+## Create test/validation partitions
+
+```{r cache=TRUE}
+trainIndex <- createDataPartition(trainData1$classe, p = 0.6, list = FALSE)
+training <- trainData1[trainIndex, ]
+validation <- trainData1[-trainIndex, ]
+```
+
+
+## Cross-Validation  
+
+```{r cache=TRUE, warning=FALSE}
+rfit <- randomForest(classe ~ .,data = training, importance = TRUE); rfit
+cv <- confusionMatrix(predict(rfit, validation), validation$classe)
+```
+
+The cross-validation accuracy is `r cv$overall[[1]] * 100`%.
+
+```{r cache=TRUE}
+plot(rfit)
+```
+
